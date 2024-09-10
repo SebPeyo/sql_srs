@@ -3,6 +3,7 @@
 import io
 
 import duckdb
+
 import pandas as pd
 import streamlit as st
 
