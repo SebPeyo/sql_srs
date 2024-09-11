@@ -42,6 +42,16 @@ Spaced Repetition System SQL Practice
 """
 )
 
+with st.sidebar:
+    topic = st.selectbox(
+        "What would you like to review?",
+        ("Joins", "GroupBy", "CTEs", "Window Functions"),
+        index=None,
+        placeholder="Select a theme ...",
+    )
+
+    st.write(f"You have selected: {topic}")
+
 query = st.text_area(label="Enter your SQL code Here")
 
 if query:
