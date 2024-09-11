@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pylint duckdb pandas streamlit
       - run: |
-          pylint --verbose app.py
+          pylint --verbose *.py
 
   isort:
     runs-on: ubuntu-latest
