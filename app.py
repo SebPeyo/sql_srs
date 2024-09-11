@@ -5,6 +5,7 @@ import io
 import duckdb
 import pandas as pd
 import streamlit as st
+import ast
 
 con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
 
@@ -24,14 +25,16 @@ with st.sidebar:
         index=None,
         placeholder="Select a theme ...",
     )
-
-    st.write(f"You have selected: {topic}")
-    exercise=con.execute("SELECT * FROM memory_state WHERE theme = ?",parameters=(topic,)).df()
-    st.dataframe(exercise)
+    if topic:
+        st.write(f"You have selected: {topic}")
+        exercise=con.execute(query="SELECT * FROM memory_state WHERE theme = ?",parameters=(topic,)).df()
+        st.dataframe(exercise)
 
 query = st.text_area(label="Enter your SQL code Here")
 
-# if query:
+if query:
+    df_query= con.execute(query)
+    st.dataframe(df_query)
 #     df_query = duckdb.sql(query).df()
 #
 #     column_diff = df_query.shape[1] - df_answer.shape[1]
@@ -53,17 +56,17 @@ query = st.text_area(label="Enter your SQL code Here")
 #
 #     st.dataframe(df_query)
 #
-# tab1, tab2 = st.tabs(["Tables", "Answer"])
-#
-# with tab1:
-#     st.write("Expected")
-#     st.dataframe(df_answer)
-#
-#     st.write("Table: beverages")
-#     st.dataframe(beverages)
-#
-#     st.write("Table: food_items")
-#     st.dataframe(food_items)
+
+tab1, tab2 = st.tabs(["Tables", "Answer"])
+
+with tab1:
+    if topic:
+        exercise_tables=ast.literal_eval(exercise.loc[0,"tables"])
+
+        for table in exercise_tables:
+            st.write(f"Table: {table}")
+            df=con.execute(query=f"SELECT * FROM {table}").df()
+            st.dataframe(df)
 #
 # with tab2:
 #     st.write(QUERY_STR)
