@@ -1,7 +1,9 @@
+# pylint: disable=(missing-module-docstring)
+
 import io
 
-import pandas as pd
 import duckdb
+import pandas as pd
 
 con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
 
@@ -16,7 +18,7 @@ data = {
     "last_reviewed": ["2024-09-11", "2024-09-11"],
 }
 memory_state_df = pd.DataFrame(data)
-con.execute("CREATE TABLE IF NOT EXISTS memory_state AS SELECT * FROM memory_state_df")
+con.execute("CREATE OR REPLACE TABLE memory_state AS SELECT * FROM memory_state_df")
 
 # ------------------------------------------------------------
 # CROSS JOIN
@@ -28,7 +30,7 @@ Expresso,2
 Tea,3
 """
 beverages = pd.read_csv(io.StringIO(CSV))
-con.execute("CREATE TABLE IF NOT EXISTS beverages AS SELECT * FROM beverages")
+con.execute("CREATE OR REPLACE TABLE beverages AS SELECT * FROM beverages")
 
 
 CSV2 = """
@@ -38,4 +40,4 @@ chocolatine,2
 muffin,3
 """
 food_items = pd.read_csv(io.StringIO(CSV2))
-con.execute("CREATE TABLE IF NOT EXISTS food_items AS SELECT * FROM food_items")
+con.execute("CREATE OR REPLACE TABLE food_items AS SELECT * FROM food_items")
