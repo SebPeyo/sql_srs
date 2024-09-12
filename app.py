@@ -5,6 +5,7 @@ import os
 import duckdb
 import pandas as pd
 import streamlit as st
+from datetime import date , timedelta
 
 # ------------------------------------------------------------
 # Initialize the db on streamlit if not found
@@ -45,7 +46,7 @@ def check_user_solution(user_query: str) -> None:
     df_query = con.execute(user_query).df()
     column_diff = df_query.shape[1] - df_answer.shape[1]
     row_diff = df_query.shape[0] - df_answer.shape[0]
-    st.dataframe(df_query)
+
     if row_diff != 0:
         st.write(f"There is a {row_diff} rows difference with the solution!")
     try:
@@ -55,9 +56,12 @@ def check_user_solution(user_query: str) -> None:
 
         if df_compare.shape != (0, 0):
             st.dataframe(df_compare)
-
+        else:
+            st.write("Correct! 🎉")
+            st.balloons()
     except KeyError:
         st.write(f"There is a {column_diff} columns difference with the solution!")
+    st.dataframe(df_query)
 
 def get_topic() -> str:
     """
@@ -85,7 +89,7 @@ def get_exercise(user_topic: str) -> pd.DataFrame:
     global exercise
     if user_topic:
         topic_query = f"SELECT * FROM memory_state WHERE theme ='{user_topic}'"
-        st.write(f"You have selected: **{user_topic}**")
+        st.write(f"You have selected: **:blue[{user_topic}]**")
     else:
         topic_query = "SELECT * FROM memory_state"
     exercise = (
@@ -94,28 +98,29 @@ def get_exercise(user_topic: str) -> pd.DataFrame:
         .sort_values(by="last_reviewed")
         .reset_index(drop=True)
     )
+    st.dataframe(exercise)
     return exercise
+
+def get_solution(name_exercise: str) -> str:
+    """
+    Returns the answer of the least recently reviewed exercises
+    :param name_exercise: string containing the name of the exercise
+    :return: A SQL query that solves the exercise
+    """
+    global answer
+    with open(f"answers/{name_exercise}.sql", "r", encoding="utf-8") as f:
+        answer = f.read()
+    return answer
+
 # ------------------------------------------------------------
 # Topic and Exercise Selection
 # ------------------------------------------------------------
 
-def get_solution(exercises: pd.DataFrame) -> str:
-    """
-    Returns the answer of the least recently reviewed exercises
-    :param exercises: DataFrame containing all the exercises for a pre-selected topic
-    :return: A SQL query that solves the exercise
-    """
-    global answer
-    exercise_name = exercises.loc[0, "exercise_name"]
-    with open(f"answers/{exercise_name}.sql", "r", encoding="utf-8") as f:
-        answer = f.read()
-    return answer
-
-
 with st.sidebar:
     topic=get_topic()
     exercise=get_exercise(topic)
-    answer=get_solution(exercise)
+    exercise_name = exercise.loc[0, "exercise_name"]
+    answer=get_solution(exercise_name)
     df_answer = con.execute(answer).df()
 # ------------------------------------------------------------
 # Query input section
@@ -126,20 +131,30 @@ query = st.text_area(label="Enter your SQL code Here")
 if query:
     check_user_solution(query)
 
+for n_days in [1,3,7]:
+    if st.button(f"Revoir dans {n_days} jours"):
+        next_review = date.today() + timedelta(days=n_days)
+        con.execute(f"UPDATE memory_state SET last_reviewed = '{next_review}' WHERE exercise_name = '{exercise_name}'")
+        st.rerun()
+
+if st.button("Reset"):
+        con.execute(f"UPDATE memory_state SET last_reviewed = '1970-01-01'")
+        st.rerun()
+
 # ------------------------------------------------------------
 # Tables and Answer section
 # ------------------------------------------------------------
 
-tab1, tab2 = st.tabs(["Tables", "Answer"])
+with st.sidebar:
+    tab1, tab2 = st.tabs(["Tables", "Answer"])
 
-with tab1:
+    with tab1:
+        exercise_tables = exercise.loc[0, "tables"]
 
-    exercise_tables = exercise.loc[0, "tables"]
+        for table in exercise_tables:
+            st.write(f"<u>Table</u>: **{table}**", unsafe_allow_html=True)
+            df = con.execute(query=f"SELECT * FROM {table}").df()
+            st.dataframe(df)
 
-    for table in exercise_tables:
-        st.write(f"<u>Table</u>: **{table}**", unsafe_allow_html=True)
-        df = con.execute(query=f"SELECT * FROM {table}").df()
-        st.dataframe(df)
-
-with tab2:
-    st.code(answer)
+    with tab2:
+        st.code(answer)
