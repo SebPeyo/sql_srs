@@ -5,9 +5,11 @@ import ast
 import duckdb
 import streamlit as st
 
-con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
+# ------------------------------------------------------------
+# Connect to the database
+# ------------------------------------------------------------
 
-# APP CODE
+con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
 
 st.write(
     """
@@ -15,6 +17,10 @@ st.write(
 Spaced Repetition System SQL Practice
 """
 )
+
+# ------------------------------------------------------------
+# Topic Selection
+# ------------------------------------------------------------
 
 with st.sidebar:
     topic = st.selectbox(
@@ -30,32 +36,50 @@ with st.sidebar:
         ).df()
         st.dataframe(exercise)
 
+        exercise_name = exercise.loc[0, "exercise_name"]
+        with open(f"answers/{exercise_name}.sql", "r", encoding="utf-8") as f:
+            answer = f.read()
+
+        df_answer = con.execute(answer).df()
+
+# ------------------------------------------------------------
+# Query input section
+# ------------------------------------------------------------
+
 query = st.text_area(label="Enter your SQL code Here")
 
 if query:
-    df_query = con.execute(query)
-    st.dataframe(df_query)
-#     df_query = duckdb.sql(query).df()
-#
-#     column_diff = df_query.shape[1] - df_answer.shape[1]
-#     row_diff = df_query.shape[0] - df_answer.shape[0]
-#
-#     if row_diff != 0:
-#         st.write(f"There is a {row_diff} rows difference with the solution!")
-#
-#     try:
-#         df_query = df_query[df_answer.columns]
-#
-#         df_compare = df_query.compare(df_answer, result_names=("answer", "solution"))
-#
-#         if df_compare.shape != (0, 0):
-#             st.dataframe(df_compare)
-#
-#     except KeyError as e:
-#         st.write(f"There is a {column_diff} columns difference with the solution!")
-#
-#     st.dataframe(df_query)
-#
+    if topic:
+
+        df_query = con.execute(query).df()
+
+        column_diff = df_query.shape[1] - df_answer.shape[1]
+        row_diff = df_query.shape[0] - df_answer.shape[0]
+
+        st.dataframe(df_query)
+
+        if row_diff != 0:
+            st.write(f"There is a {row_diff} rows difference with the solution!")
+
+        try:
+            df_query = df_query[df_answer.columns]
+
+            df_compare = df_query.compare(
+                df_answer, result_names=("answer", "solution")
+            )
+
+            if df_compare.shape != (0, 0):
+                st.dataframe(df_compare)
+
+        except KeyError as e:
+            st.write(f"There is a {column_diff} columns difference with the solution!")
+
+    else:
+        st.write("Select a topic first ! 😉")
+
+# ------------------------------------------------------------
+# Tables and Answer section
+# ------------------------------------------------------------
 
 tab1, tab2 = st.tabs(["Tables", "Answer"])
 
@@ -70,7 +94,4 @@ with tab1:
 
 with tab2:
     if topic:
-        exercise_name = exercise.loc[0, "exercise_name"]
-        with open(f"answers/{exercise_name}.sql", "r", encoding="utf-8") as f:
-            answer = f.read()
         st.code(answer)
