@@ -1,15 +1,27 @@
 # pylint: disable=(missing-module-docstring)
-
-import ast
+import logging
+import os
 
 import duckdb
 import streamlit as st
 
 # ------------------------------------------------------------
+# Initialize the db on streamlit if not found
+# ------------------------------------------------------------
+
+if "data" not in os.listdir():
+    logging.debug(os.listdir())
+    logging.debug("Creating data folder ...")
+    os.mkdir("data")
+
+if "exercises_sql_tables.duckdb" not in os.listdir("data"):
+    exec(open("init_db.py").read())  # pylint: disable=all
+
+# ------------------------------------------------------------
 # Connect to the database
 # ------------------------------------------------------------
 
-con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
+con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
 
 st.write(
     """
@@ -31,9 +43,15 @@ with st.sidebar:
     )
     if topic:
         st.write(f"You have selected: {topic}")
-        exercise = con.execute(
-            query="SELECT * FROM memory_state WHERE theme = ?", parameters=(topic,)
-        ).df()
+
+        exercise = (
+            con.execute(
+                query="SELECT * FROM memory_state WHERE theme = ?", parameters=(topic,)
+            )
+            .df()
+            .sort_values(by="last_reviewed")
+            .reset_index(drop=True)
+        )
         st.dataframe(exercise)
 
         exercise_name = exercise.loc[0, "exercise_name"]
@@ -85,7 +103,7 @@ tab1, tab2 = st.tabs(["Tables", "Answer"])
 
 with tab1:
     if topic:
-        exercise_tables = ast.literal_eval(exercise.loc[0, "tables"])
+        exercise_tables = exercise.loc[0, "tables"]
 
         for table in exercise_tables:
             st.write(f"<u>Table</u>: **{table}**", unsafe_allow_html=True)
