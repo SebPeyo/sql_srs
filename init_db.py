@@ -5,7 +5,7 @@ import io
 import duckdb
 import pandas as pd
 
-con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
+con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
 
 # ------------------------------------------------------------
 # EXERCISES LIST
@@ -14,7 +14,7 @@ con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False
 data = {
     "theme": ["Joins", "Joins"],
     "exercise_name": ["beverages_and_food", "sizes_and_trademarks"],
-    "tables": [["beverages", "food_items"], ["sizes","trademarks"]],
+    "tables": [["beverages", "food_items"], ["sizes", "trademarks"]],
     "last_reviewed": ["2024-09-12", "2024-09-11"],
 }
 memory_state_df = pd.DataFrame(data)
@@ -45,24 +45,26 @@ con.execute("CREATE OR REPLACE TABLE food_items AS SELECT * FROM food_items")
 # ------------------------------------------------------------
 # CROSS JOIN - sizes and trademarks
 # ------------------------------------------------------------
-SIZES = '''
+SIZES = """
 size
 XS
 M
 L
 XL
-'''
+"""
 
 sizes = pd.read_csv(io.StringIO(SIZES))
 con.execute("CREATE OR REPLACE TABLE sizes AS SELECT * FROM sizes")
 
-TRADEMARKS = '''
+TRADEMARKS = """
 trademark
 Nike
 Asphalte
 Abercrombie
 Lewis
-'''
+"""
 
 trademarks = pd.read_csv(io.StringIO(TRADEMARKS))
 con.execute("CREATE OR REPLACE TABLE trademarks AS SELECT * FROM trademarks")
+
+con.close()
