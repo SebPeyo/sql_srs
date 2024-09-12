@@ -1,39 +1,15 @@
 # pylint: disable=(missing-module-docstring)
 
-import io
+import ast
 
 import duckdb
-import pandas as pd
 import streamlit as st
 
-# DATA
+# ------------------------------------------------------------
+# Connect to the database
+# ------------------------------------------------------------
 
-CSV = """
-beverage,price
-orange juice,2.5
-Expresso,2
-Tea,3
-"""
-beverages = pd.read_csv(io.StringIO(CSV))
-
-CSV2 = """
-food_item,food_price
-cookie juice,2.5
-chocolatine,2
-muffin,3
-"""
-food_items = pd.read_csv(io.StringIO(CSV2))
-
-# ANSWER
-
-QUERY_STR = """
-SELECT * FROM beverages
-CROSS JOIN food_items
-"""
-
-df_answer = duckdb.sql(QUERY_STR).df()
-
-# APP CODE
+con = duckdb.connect(database="data/exercises_sql_table.duckdb", read_only=False)
 
 st.write(
     """
@@ -42,6 +18,10 @@ Spaced Repetition System SQL Practice
 """
 )
 
+# ------------------------------------------------------------
+# Topic Selection
+# ------------------------------------------------------------
+
 with st.sidebar:
     topic = st.selectbox(
         "What would you like to review?",
@@ -49,44 +29,69 @@ with st.sidebar:
         index=None,
         placeholder="Select a theme ...",
     )
+    if topic:
+        st.write(f"You have selected: {topic}")
+        exercise = con.execute(
+            query="SELECT * FROM memory_state WHERE theme = ?", parameters=(topic,)
+        ).df()
+        st.dataframe(exercise)
 
-    st.write(f"You have selected: {topic}")
+        exercise_name = exercise.loc[0, "exercise_name"]
+        with open(f"answers/{exercise_name}.sql", "r", encoding="utf-8") as f:
+            answer = f.read()
+
+        df_answer = con.execute(answer).df()
+
+# ------------------------------------------------------------
+# Query input section
+# ------------------------------------------------------------
 
 query = st.text_area(label="Enter your SQL code Here")
 
 if query:
-    df_query = duckdb.sql(query).df()
+    if topic:
 
-    column_diff = df_query.shape[1] - df_answer.shape[1]
-    row_diff = df_query.shape[0] - df_answer.shape[0]
+        df_query = con.execute(query).df()
 
-    if row_diff != 0:
-        st.write(f"There is a {row_diff} rows difference with the solution!")
+        column_diff = df_query.shape[1] - df_answer.shape[1]
+        row_diff = df_query.shape[0] - df_answer.shape[0]
 
-    try:
-        df_query = df_query[df_answer.columns]
+        st.dataframe(df_query)
 
-        df_compare = df_query.compare(df_answer, result_names=("answer", "solution"))
+        if row_diff != 0:
+            st.write(f"There is a {row_diff} rows difference with the solution!")
 
-        if df_compare.shape != (0, 0):
-            st.dataframe(df_compare)
+        try:
+            df_query = df_query[df_answer.columns]
 
-    except KeyError as e:
-        st.write(f"There is a {column_diff} columns difference with the solution!")
+            df_compare = df_query.compare(
+                df_answer, result_names=("answer", "solution")
+            )
 
-    st.dataframe(df_query)
+            if df_compare.shape != (0, 0):
+                st.dataframe(df_compare)
+
+        except KeyError as e:
+            st.write(f"There is a {column_diff} columns difference with the solution!")
+
+    else:
+        st.write("Select a topic first ! 😉")
+
+# ------------------------------------------------------------
+# Tables and Answer section
+# ------------------------------------------------------------
 
 tab1, tab2 = st.tabs(["Tables", "Answer"])
 
 with tab1:
-    st.write("Expected")
-    st.dataframe(df_answer)
+    if topic:
+        exercise_tables = ast.literal_eval(exercise.loc[0, "tables"])
 
-    st.write("Table: beverages")
-    st.dataframe(beverages)
-
-    st.write("Table: food_items")
-    st.dataframe(food_items)
+        for table in exercise_tables:
+            st.write(f"<u>Table</u>: **{table}**", unsafe_allow_html=True)
+            df = con.execute(query=f"SELECT * FROM {table}").df()
+            st.dataframe(df)
 
 with tab2:
-    st.write(QUERY_STR)
+    if topic:
+        st.code(answer)
