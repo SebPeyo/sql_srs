@@ -1,11 +1,11 @@
 # pylint: disable=(missing-module-docstring)
 import logging
 import os
+from datetime import date, timedelta
 
 import duckdb
 import pandas as pd
 import streamlit as st
-from datetime import date , timedelta
 
 # ------------------------------------------------------------
 # Initialize the db on streamlit if not found
@@ -36,6 +36,7 @@ st.write(
 # Functions
 # ------------------------------------------------------------
 
+
 def check_user_solution(user_query: str) -> None:
     """
     Check whether the user's SQL query is correct by:
@@ -63,6 +64,7 @@ def check_user_solution(user_query: str) -> None:
         st.write(f"There is a {column_diff} columns difference with the solution!")
     st.dataframe(df_query)
 
+
 def get_topic() -> str:
     """
     Define the SQL topic to train on based on the user input.
@@ -79,6 +81,7 @@ def get_topic() -> str:
         placeholder="Select a theme ...",
     )
     return topic
+
 
 def get_exercise(user_topic: str) -> pd.DataFrame:
     """
@@ -101,6 +104,7 @@ def get_exercise(user_topic: str) -> pd.DataFrame:
     st.dataframe(exercise)
     return exercise
 
+
 def get_solution(name_exercise: str) -> str:
     """
     Returns the answer of the least recently reviewed exercises
@@ -112,15 +116,16 @@ def get_solution(name_exercise: str) -> str:
         answer = f.read()
     return answer
 
+
 # ------------------------------------------------------------
 # Topic and Exercise Selection
 # ------------------------------------------------------------
 
 with st.sidebar:
-    topic=get_topic()
-    exercise=get_exercise(topic)
+    topic = get_topic()
+    exercise = get_exercise(topic)
     exercise_name = exercise.loc[0, "exercise_name"]
-    answer=get_solution(exercise_name)
+    answer = get_solution(exercise_name)
     df_answer = con.execute(answer).df()
 # ------------------------------------------------------------
 # Query input section
@@ -131,15 +136,17 @@ query = st.text_area(label="Enter your SQL code Here")
 if query:
     check_user_solution(query)
 
-for n_days in [1,3,7]:
+for n_days in [1, 3, 7]:
     if st.button(f"Revoir dans {n_days} jours"):
         next_review = date.today() + timedelta(days=n_days)
-        con.execute(f"UPDATE memory_state SET last_reviewed = '{next_review}' WHERE exercise_name = '{exercise_name}'")
+        con.execute(
+            f"UPDATE memory_state SET last_reviewed = '{next_review}' WHERE exercise_name = '{exercise_name}'"
+        )
         st.rerun()
 
 if st.button("Reset"):
-        con.execute(f"UPDATE memory_state SET last_reviewed = '1970-01-01'")
-        st.rerun()
+    con.execute(f"UPDATE memory_state SET last_reviewed = '1970-01-01'")
+    st.rerun()
 
 # ------------------------------------------------------------
 # Tables and Answer section
