@@ -1,5 +1,4 @@
 .idea/
 sql_project/
 test.py
-
-*.csv
+generate_data.py
