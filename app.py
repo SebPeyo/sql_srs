@@ -1,7 +1,5 @@
 # pylint: disable=(missing-module-docstring)
 
-import ast
-
 import duckdb
 import streamlit as st
 
@@ -31,9 +29,10 @@ with st.sidebar:
     )
     if topic:
         st.write(f"You have selected: {topic}")
+
         exercise = con.execute(
             query="SELECT * FROM memory_state WHERE theme = ?", parameters=(topic,)
-        ).df()
+        ).df().sort_values(by="last_reviewed").reset_index(drop=True)
         st.dataframe(exercise)
 
         exercise_name = exercise.loc[0, "exercise_name"]
@@ -85,7 +84,7 @@ tab1, tab2 = st.tabs(["Tables", "Answer"])
 
 with tab1:
     if topic:
-        exercise_tables = ast.literal_eval(exercise.loc[0, "tables"])
+        exercise_tables = exercise.loc[0, "tables"]
 
         for table in exercise_tables:
             st.write(f"<u>Table</u>: **{table}**", unsafe_allow_html=True)
