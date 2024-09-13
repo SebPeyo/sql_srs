@@ -131,7 +131,8 @@ with st.sidebar:
 # Query input section
 # ------------------------------------------------------------
 
-query = st.text_area(label="Enter your SQL code Here")
+question = exercise.loc[0, "question"]
+query = st.text_area(label=f":orange[{question}]")
 
 if query:
     check_user_solution(query)
